@@ -1,7 +1,4 @@
-// Phase 2 replaces this with the Better Auth handler (SPEC §2, §6).
-function notImplemented(): Response {
-  return Response.json({ error: 'Not implemented' }, { status: 501 })
-}
+import { toNextJsHandler } from 'better-auth/next-js'
+import { auth } from '@/lib/auth'
 
-export const GET = notImplemented
-export const POST = notImplemented
+export const { GET, POST } = toNextJsHandler(auth)
