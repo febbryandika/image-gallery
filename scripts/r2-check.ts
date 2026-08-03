@@ -12,9 +12,11 @@ import { deleteObject, publicUrl, putObject } from '../src/lib/r2.ts'
 const ONE_PIXEL_WEBP =
   'UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA='
 
+class CheckError extends Error {}
+
+// Throws rather than exiting, so the finally block always removes the object.
 function fail(message: string): never {
-  console.error(`FAIL  ${message}`)
-  process.exit(1)
+  throw new CheckError(message)
 }
 
 function buildImage(): Uint8Array {
@@ -27,6 +29,27 @@ function buildImage(): Uint8Array {
   return bytes
 }
 
+async function get(url: string): Promise<Response> {
+  try {
+    return await fetch(url, { cache: 'no-store' })
+  } catch (error) {
+    const cause = error instanceof Error ? error.cause : undefined
+    const code =
+      cause && typeof cause === 'object' && 'code' in cause
+        ? String(cause.code)
+        : ''
+
+    if (code.startsWith('ERR_TLS') || code === 'ENOTFOUND') {
+      fail(
+        `could not reach ${new URL(url).hostname} (${code}). Some networks ` +
+          'hijack DNS for r2.dev; check with `dig` and compare against ' +
+          'https://cloudflare-dns.com/dns-query?name=<host>&type=A',
+      )
+    }
+    fail(`fetch failed: ${String(error)}`)
+  }
+}
+
 async function main(): Promise<void> {
   const image = buildImage()
   // Matches the real key shape from SPEC §4.1, minus a user id.
@@ -37,36 +60,47 @@ async function main(): Promise<void> {
   console.log(`put    ${objectKey} (${image.byteLength} bytes)`)
   await putObject(objectKey, image, 'image/webp')
 
-  console.log(`url    ${url}`)
+  try {
+    console.log(`url    ${url}`)
 
-  const found = await fetch(url)
-  if (!found.ok) {
-    fail(
-      `GET returned ${found.status}. If this is 401 the bucket has no public ` +
-        'access — enable the r2.dev URL or attach a custom domain.',
-    )
+    const found = await get(url)
+    if (!found.ok) {
+      fail(
+        `GET returned ${found.status}. If this is 401 the bucket has no ` +
+          'public access — enable the r2.dev URL or attach a custom domain.',
+      )
+    }
+
+    const contentType = found.headers.get('content-type')
+    if (contentType !== 'image/webp') {
+      fail(`expected content-type image/webp, got ${contentType}`)
+    }
+    console.log(`get    ${found.status} ${contentType}`)
+
+    const pauseMs = Number(process.env.R2_CHECK_PAUSE_MS ?? 0)
+    if (pauseMs > 0) {
+      console.log(`pause  open the URL now — deleting in ${pauseMs / 1000}s`)
+      await new Promise((resolve) => setTimeout(resolve, pauseMs))
+    }
+  } finally {
+    // Never leave the test object behind, however the checks above ended.
+    await deleteObject(objectKey)
+    console.log(`delete ${objectKey}`)
   }
 
-  const contentType = found.headers.get('content-type')
-  if (contentType !== 'image/webp') {
-    fail(`expected content-type image/webp, got ${contentType}`)
-  }
-  console.log(`get    ${found.status} ${contentType}`)
-
-  const pauseMs = Number(process.env.R2_CHECK_PAUSE_MS ?? 0)
-  if (pauseMs > 0) {
-    console.log(`pause  open the URL now — deleting in ${pauseMs / 1000}s`)
-    await new Promise((resolve) => setTimeout(resolve, pauseMs))
-  }
-
-  await deleteObject(objectKey)
-  console.log(`delete ${objectKey}`)
-
-  const gone = await fetch(url, { cache: 'no-store' })
+  const gone = await get(url)
   if (gone.ok) fail(`GET still returned ${gone.status} after delete`)
   console.log(`get    ${gone.status} after delete`)
 
   console.log('PASS   round-trip complete')
 }
 
-await main()
+try {
+  await main()
+} catch (error) {
+  if (error instanceof CheckError) {
+    console.error(`FAIL  ${error.message}`)
+    process.exit(1)
+  }
+  throw error
+}
