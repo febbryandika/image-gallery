@@ -12,4 +12,11 @@ export type PhotoView = {
   tags: string[]
   width: number
   height: number
+  albumId: string | null
+}
+
+/** The album list a move menu picks from. Names only — no counts, no photos. */
+export type AlbumOption = {
+  id: string
+  name: string
 }

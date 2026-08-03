@@ -7,6 +7,11 @@
 export type SeedPhoto = {
   /** Filename inside seed/images/ */
   file: string
+  /**
+   * Album name, created on demand by the seed. Omitted on a few entries on
+   * purpose, so the demo also shows photos that belong to no album.
+   */
+  album?: string
   altText: string
   description: string
   tags: string[]
@@ -15,6 +20,7 @@ export type SeedPhoto = {
 export const SEED_PHOTOS: SeedPhoto[] = [
   {
     file: '48-street-001.jpg',
+    album: 'Exteriors',
     altText:
       'Cafe entrance under a dark tiled awning, sign reading 48 Street in Latin and Japanese script',
     description:
@@ -23,6 +29,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: '48-street-003.jpg',
+    album: 'Interiors',
     altText:
       'Dim cafe corner with two grey armchairs and a small round table against a bare concrete wall',
     description:
@@ -31,6 +38,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'bagi-kopi-signature-001.jpg',
+    album: 'Exteriors',
     altText:
       'Gravel courtyard with white metal stools and a concrete sign reading Bagi Kopi Signature',
     description:
@@ -39,6 +47,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'daruma-001.jpg',
+    album: 'Exteriors',
     altText:
       'Whitewashed cafe with a tall steel-framed window, trailing ivy along the roofline',
     description:
@@ -47,6 +56,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'daruma-003.jpg',
+    album: 'Interiors',
     altText:
       'Sunlit balcony table and wooden chairs looking out over green treetops',
     description:
@@ -55,6 +65,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'handoko-001.jpg',
+    album: 'Exteriors',
     altText:
       'Small A-frame cafe with a steep dark roof, surrounded by tree ferns and palms',
     description:
@@ -63,6 +74,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'handoko-004.jpg',
+    album: 'Food & Drink',
     altText:
       'Four takeaway boxes of club sandwiches and seasoned fries on a wooden stool',
     description:
@@ -71,6 +83,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'imadji-coffee-001.jpg',
+    album: 'Exteriors',
     altText:
       'Angular concrete coffee kiosk on a beachfront promenade, sea and cloud behind it',
     description:
@@ -87,6 +100,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'kopi-toko-djawa-critical-11-001.jpg',
+    album: 'Exteriors',
     altText:
       'Weathered concrete facade painted with a red Kopi Toko Djawa sign, overgrown with plants',
     description:
@@ -95,6 +109,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'kopi-toko-djawa-critical-11-003.jpg',
+    album: 'Interiors',
     altText:
       'Deep blue cafe interior with three globe pendant lights above a long service counter',
     description:
@@ -103,6 +118,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'mahboen-coffee-001.jpg',
+    album: 'Exteriors',
     altText:
       'Brick and timber pavilion under a terracotta tiled roof, seen across a lawn',
     description:
@@ -111,6 +127,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'mahboen-coffee-004.jpg',
+    album: 'Food & Drink',
     altText:
       'Two iced coffees in tumblers on a wooden ledge, one topped with rosemary, one with mint',
     description: 'Paired drink shots against a brick and stone wall.',
@@ -118,6 +135,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'nest-004.jpg',
+    album: 'Food & Drink',
     altText:
       'Tall wine glass of layered purple and red iced drink on a pale wooden table',
     description:
@@ -126,6 +144,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'over-the-moon-001.jpg',
+    album: 'Interiors',
     altText:
       'Cafe bar with a pink neon sign reading Over the Moon above a carved terracotta wall',
     description:
@@ -134,6 +153,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'over-the-moon-004.jpg',
+    album: 'Food & Drink',
     altText:
       'Strawberry yoghurt parfait in a glass on the corner of a wooden table',
     description:
@@ -150,6 +170,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'qual-coffee-003.jpg',
+    album: 'Interiors',
     altText:
       'Barista in a bucket hat at work below a yellow neon sign reading Qual Coffee',
     description:
@@ -166,6 +187,7 @@ export const SEED_PHOTOS: SeedPhoto[] = [
   },
   {
     file: 'sedjuk-bakmi-kopi-004.jpg',
+    album: 'Food & Drink',
     altText:
       'Two bowls of egg noodles with grilled chicken and a bowl of wonton soup on dark wood',
     description:

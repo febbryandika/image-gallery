@@ -8,11 +8,13 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { MovePhotoMenu } from '@/components/MovePhotoMenu'
 import { Button } from '@/components/ui/button'
-import type { PhotoView } from '@/lib/photo-view'
+import type { AlbumOption, PhotoView } from '@/lib/photo-view'
 
 type LightboxProps = {
   photos: PhotoView[]
+  albums: AlbumOption[]
   index: number | null
   onIndexChange: (index: number) => void
   onClose: () => void
@@ -21,6 +23,7 @@ type LightboxProps = {
 
 export function Lightbox({
   photos,
+  albums,
   index,
   onIndexChange,
   onClose,
@@ -85,34 +88,40 @@ export function Lightbox({
           priority
         />
 
-        <div
-          className="flex items-center justify-between gap-4"
-          role="group"
-          aria-label="Photo navigation"
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handlePrevious}
-            disabled={!hasPrevious}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {/* Outside the navigation group — it moves the photo, it doesn't
+              navigate between photos. */}
+          <MovePhotoMenu photo={photo} albums={albums} />
+
+          <div
+            className="flex flex-1 items-center justify-between gap-4"
+            role="group"
+            aria-label="Photo navigation"
           >
-            <ChevronLeftIcon aria-hidden="true" />
-            Previous
-          </Button>
-          <p aria-live="polite" className="text-sm text-muted-foreground">
-            {current + 1} of {photos.length}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleNext}
-            disabled={!hasNext}
-          >
-            Next
-            <ChevronRightIcon aria-hidden="true" />
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handlePrevious}
+              disabled={!hasPrevious}
+            >
+              <ChevronLeftIcon aria-hidden="true" />
+              Previous
+            </Button>
+            <p aria-live="polite" className="text-sm text-muted-foreground">
+              {current + 1} of {photos.length}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleNext}
+              disabled={!hasNext}
+            >
+              Next
+              <ChevronRightIcon aria-hidden="true" />
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

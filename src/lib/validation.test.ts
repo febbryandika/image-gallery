@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  albumNameSchema,
   credentialsSchema,
+  MAX_ALBUM_NAME_LENGTH,
   MAX_TAG_LENGTH,
   MAX_TAGS_PER_PHOTO,
   normalizeTags,
@@ -47,6 +49,40 @@ describe('normalizeTags', () => {
 
   it('returns an empty array for an empty input', () => {
     expect(normalizeTags([])).toEqual([])
+  })
+})
+
+describe('albumNameSchema', () => {
+  it('accepts an ordinary name', () => {
+    const result = albumNameSchema.safeParse('Exteriors')
+
+    expect(result).toMatchObject({ success: true, data: 'Exteriors' })
+  })
+
+  it('trims surrounding whitespace off the parsed value', () => {
+    const result = albumNameSchema.safeParse('  Food & Drink  ')
+
+    expect(result).toMatchObject({ success: true, data: 'Food & Drink' })
+  })
+
+  it('rejects an empty name', () => {
+    expect(albumNameSchema.safeParse('').success).toBe(false)
+  })
+
+  it('rejects a whitespace-only name, rather than storing a blank row', () => {
+    expect(albumNameSchema.safeParse('    ').success).toBe(false)
+  })
+
+  it(`rejects a name over ${MAX_ALBUM_NAME_LENGTH} characters`, () => {
+    const tooLong = 'a'.repeat(MAX_ALBUM_NAME_LENGTH + 1)
+
+    expect(albumNameSchema.safeParse(tooLong).success).toBe(false)
+  })
+
+  it(`accepts a name of exactly ${MAX_ALBUM_NAME_LENGTH} characters`, () => {
+    const exact = 'a'.repeat(MAX_ALBUM_NAME_LENGTH)
+
+    expect(albumNameSchema.safeParse(exact).success).toBe(true)
   })
 })
 
