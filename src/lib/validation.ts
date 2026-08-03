@@ -33,6 +33,9 @@ export const MAX_PHOTOS_PER_ACCOUNT = 50
 export const MAX_TAG_LENGTH = 30
 export const MAX_TAGS_PER_PHOTO = 8
 
+/** Screen readers truncate around here; SPEC §4.2 uses the same number. */
+export const MAX_ALT_TEXT_LENGTH = 125
+
 /**
  * Lowercase, trim, drop empties, dedupe, cap length and count (SPEC §7).
  * Applied to model output *and* to user-entered tags — the client's list is
@@ -52,7 +55,12 @@ export function normalizeTags(tags: readonly string[]): string[] {
 
 /** Shared by the upload form and the updatePhoto Server Action. */
 export const updatePhotoSchema = z.object({
-  altText: z.string().max(125, 'Alt text must be under 125 characters'),
+  altText: z
+    .string()
+    .max(
+      MAX_ALT_TEXT_LENGTH,
+      `Alt text must be under ${MAX_ALT_TEXT_LENGTH} characters`,
+    ),
   description: z.string().max(500, 'Description must be under 500 characters'),
   tags: z.array(z.string()),
   albumId: z.string().nullable().optional(),

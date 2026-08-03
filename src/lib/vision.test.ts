@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MAX_ALT_TEXT_LENGTH } from './validation'
 
 const { generateObject } = vi.hoisted(() => ({ generateObject: vi.fn() }))
 
@@ -47,6 +48,37 @@ describe('describeImage', () => {
 
     expect(result.altText).toBe('A red bicycle leaning on a wall')
     expect(result.tags).toEqual(['bicycle', 'red', 'street'])
+  })
+
+  // Regression: the generation schema used to carry .max(125), so a model that
+  // overshot by a few characters failed validation and the whole description
+  // was thrown away. Length is trimmed here instead of discarded.
+  it('trims over-long alt text at a word boundary instead of losing it', async () => {
+    const long =
+      'Minimalist sunset with glowing sun on horizon, gradient sky transitioning from deep blue to orange and yellow above dark ground'
+
+    generateObject.mockResolvedValue({
+      object: { altText: long, description: 'A sunset.', tags: ['sunset'] },
+    })
+
+    const result = await describeImage(THUMB)
+
+    expect(long.length).toBeGreaterThan(MAX_ALT_TEXT_LENGTH)
+    expect(result.altText.length).toBeLessThanOrEqual(MAX_ALT_TEXT_LENGTH)
+    expect(result.altText).not.toBe('')
+    // Trimmed at a space, so it doesn't end mid-word.
+    expect(long.startsWith(result.altText)).toBe(true)
+    expect(result.altText).not.toMatch(/[\s,;:]$/)
+  })
+
+  it('leaves alt text under the limit untouched', async () => {
+    generateObject.mockResolvedValue({
+      object: { altText: 'A short caption', description: 'd', tags: [] },
+    })
+
+    await expect(describeImage(THUMB)).resolves.toMatchObject({
+      altText: 'A short caption',
+    })
   })
 
   it('sends the thumbnail bytes as a file part, not a URL', async () => {
