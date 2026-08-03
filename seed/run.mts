@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { db } from '@/db'
-import { photos } from '@/db/schema'
+import { albums, photos } from '@/db/schema'
 import { user } from '@/db/auth-schema'
 import { auth } from '@/lib/auth'
 import { processAndStorePhoto } from '@/lib/photo-pipeline'
@@ -47,6 +47,26 @@ async function findOrCreateDemoUser(): Promise<string> {
   return created.user.id
 }
 
+/**
+ * Creates one album per distinct name in the seed data and returns a name → id
+ * map. The albums table was wiped first, so this always inserts fresh rows.
+ */
+async function createAlbums(userId: string): Promise<Map<string, string>> {
+  const names = [
+    ...new Set(SEED_PHOTOS.flatMap((entry) => entry.album ?? [])),
+  ].sort()
+
+  if (names.length === 0) return new Map()
+
+  const created = await db
+    .insert(albums)
+    .values(names.map((name) => ({ userId, name })))
+    .returning({ id: albums.id, name: albums.name })
+
+  console.log(`albums  ${created.map((album) => album.name).join(', ')}`)
+  return new Map(created.map((album) => [album.name, album.id]))
+}
+
 /** Everything under this user's prefix, so a re-run starts from nothing. */
 async function wipeUserPhotos(userId: string): Promise<void> {
   const s3 = new S3Client({
@@ -75,7 +95,15 @@ async function wipeUserPhotos(userId: string): Promise<void> {
     .where(eq(photos.userId, userId))
     .returning({ id: photos.id })
 
-  console.log(`wipe    ${deleted.length} rows, ${keys.length} objects`)
+  // After the photos, so the FK's ON DELETE SET NULL has nothing left to do.
+  const droppedAlbums = await db
+    .delete(albums)
+    .where(eq(albums.userId, userId))
+    .returning({ id: albums.id })
+
+  console.log(
+    `wipe    ${deleted.length} rows, ${keys.length} objects, ${droppedAlbums.length} albums`,
+  )
 }
 
 async function main(): Promise<void> {
@@ -98,12 +126,14 @@ async function main(): Promise<void> {
 
   const userId = await findOrCreateDemoUser()
   await wipeUserPhotos(userId)
+  const albumIds = await createAlbums(userId)
 
   for (const entry of SEED_PHOTOS) {
     const input = await readFile(join(IMAGES_DIR, entry.file))
     await processAndStorePhoto({
       userId,
       input,
+      albumId: entry.album ? albumIds.get(entry.album) : undefined,
       metadata: {
         altText: entry.altText,
         description: entry.description,

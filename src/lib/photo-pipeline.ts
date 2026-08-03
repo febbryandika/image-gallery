@@ -23,6 +23,8 @@ export type PhotoMetadata = {
 export type StorePhotoParams = {
   userId: string
   input: Buffer
+  /** The seed files photos straight into an album; uploads land unfiled. */
+  albumId?: string
   /** Hardcoded metadata. The seed passes this; the upload route doesn't. */
   metadata?: PhotoMetadata
   /**
@@ -40,6 +42,7 @@ export type StorePhotoParams = {
 export async function processAndStorePhoto({
   userId,
   input,
+  albumId,
   metadata,
   deriveMetadata,
 }: StorePhotoParams) {
@@ -95,6 +98,7 @@ export async function processAndStorePhoto({
         id,
         userId,
         storageKey,
+        albumId,
         width: full.info.width,
         height: full.info.height,
         ...(derived ?? metadata ?? {}),

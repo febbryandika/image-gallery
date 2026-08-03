@@ -2,16 +2,19 @@
 
 import Image from 'next/image'
 import { DeletePhotoButton } from '@/components/DeletePhotoButton'
+import { MovePhotoMenu } from '@/components/MovePhotoMenu'
 import { Badge } from '@/components/ui/badge'
-import type { PhotoView } from '@/lib/photo-view'
+import type { AlbumOption, PhotoView } from '@/lib/photo-view'
 
 type PhotoCardProps = {
   photo: PhotoView
+  albums: AlbumOption[]
   onOpen: (id: string, trigger: HTMLButtonElement) => void
 }
 
-export function PhotoCard({ photo, onOpen }: PhotoCardProps) {
+export function PhotoCard({ photo, albums, onOpen }: PhotoCardProps) {
   const needsAltText = photo.altText.trim() === ''
+  const album = albums.find((candidate) => candidate.id === photo.albumId)
 
   function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
     onOpen(photo.id, event.currentTarget)
@@ -41,13 +44,20 @@ export function PhotoCard({ photo, onOpen }: PhotoCardProps) {
         />
       </button>
 
-      {needsAltText ? (
-        <Badge variant="secondary" className="absolute top-2 left-2">
-          Add alt text
-        </Badge>
-      ) : null}
+      {/* Always visible: which album this is in, and whether it still needs
+          alt text, are facts about the photo rather than hover affordances. */}
+      <div className="pointer-events-none absolute top-2 left-2 flex flex-wrap gap-1">
+        {needsAltText ? <Badge variant="secondary">Add alt text</Badge> : null}
+        {album ? (
+          <Badge variant="secondary">
+            <span className="sr-only">Album: </span>
+            {album.name}
+          </Badge>
+        ) : null}
+      </div>
 
-      <div className="absolute top-2 right-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none">
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none">
+        <MovePhotoMenu photo={photo} albums={albums} />
         <DeletePhotoButton photoId={photo.id} altText={photo.altText} />
       </div>
 

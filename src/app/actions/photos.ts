@@ -60,7 +60,9 @@ export async function updatePhoto(
     return { ok: false, error: 'That photo no longer exists.' }
   }
 
-  revalidatePath('/')
+  // The layout, so a move refreshes the source album, the destination album,
+  // and the sidebar's counts — not just the grid the caller happens to be on.
+  revalidatePath('/', 'layout')
   return { ok: true }
 }
 
@@ -89,5 +91,6 @@ export async function deletePhoto(id: string): Promise<void> {
 
   await db.delete(photos).where(owned)
 
-  revalidatePath('/')
+  // The layout too — the sidebar's counts are wrong until it re-renders.
+  revalidatePath('/', 'layout')
 }

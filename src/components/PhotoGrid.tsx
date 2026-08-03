@@ -3,13 +3,14 @@
 import { useRef, useState } from 'react'
 import { Lightbox } from '@/components/Lightbox'
 import { PhotoCard } from '@/components/PhotoCard'
-import type { PhotoView } from '@/lib/photo-view'
+import type { AlbumOption, PhotoView } from '@/lib/photo-view'
 
 type PhotoGridProps = {
   photos: PhotoView[]
+  albums: AlbumOption[]
 }
 
-export function PhotoGrid({ photos }: PhotoGridProps) {
+export function PhotoGrid({ photos, albums }: PhotoGridProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   // The card that opened the lightbox, so focus can return to it on close.
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -37,12 +38,18 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
     <>
       <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
         {photos.map((photo) => (
-          <PhotoCard key={photo.id} photo={photo} onOpen={handleOpen} />
+          <PhotoCard
+            key={photo.id}
+            photo={photo}
+            albums={albums}
+            onOpen={handleOpen}
+          />
         ))}
       </div>
 
       <Lightbox
         photos={photos}
+        albums={albums}
         index={openIndex}
         onIndexChange={setOpenIndex}
         onClose={handleClose}

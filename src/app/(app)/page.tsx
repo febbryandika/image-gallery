@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { db } from '@/db'
 import { photos } from '@/db/schema'
 import { requireSession } from '@/lib/auth'
-import type { PhotoView } from '@/lib/photo-view'
-import { publicUrl } from '@/lib/r2'
+import { listAlbumOptions, toPhotoView } from '@/lib/gallery-data'
 
 export const PAGE_SIZE = 60
 
@@ -30,24 +29,18 @@ export default async function GalleryPage({ searchParams }: PageProps<'/'>) {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const page = Math.min(parsePage((await searchParams).page), totalPages)
 
-  const rows = await db
-    .select()
-    .from(photos)
-    .where(eq(photos.userId, userId))
-    .orderBy(desc(photos.createdAt))
-    .limit(PAGE_SIZE)
-    .offset((page - 1) * PAGE_SIZE)
+  const [rows, albumOptions] = await Promise.all([
+    db
+      .select()
+      .from(photos)
+      .where(eq(photos.userId, userId))
+      .orderBy(desc(photos.createdAt))
+      .limit(PAGE_SIZE)
+      .offset((page - 1) * PAGE_SIZE),
+    listAlbumOptions(userId),
+  ])
 
-  const items: PhotoView[] = rows.map((row) => ({
-    id: row.id,
-    thumbUrl: publicUrl(row.storageKey, 'thumb'),
-    fullUrl: publicUrl(row.storageKey, 'full'),
-    altText: row.altText,
-    description: row.description,
-    tags: row.tags,
-    width: row.width,
-    height: row.height,
-  }))
+  const items = rows.map(toPhotoView)
 
   return (
     <div className="space-y-8">
@@ -60,7 +53,11 @@ export default async function GalleryPage({ searchParams }: PageProps<'/'>) {
         ) : null}
       </div>
 
-      {items.length === 0 ? <EmptyGallery /> : <PhotoGrid photos={items} />}
+      {items.length === 0 ? (
+        <EmptyGallery />
+      ) : (
+        <PhotoGrid photos={items} albums={albumOptions} />
+      )}
 
       {totalPages > 1 ? (
         <nav

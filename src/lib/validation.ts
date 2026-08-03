@@ -53,6 +53,22 @@ export function normalizeTags(tags: readonly string[]): string[] {
   return [...seen]
 }
 
+export const MAX_ALBUM_NAME_LENGTH = 60
+
+/**
+ * Shared by the sidebar's create/rename forms and the album Server Actions.
+ * Trimmed before the length checks, so a whitespace-only name is rejected
+ * rather than stored as a blank row.
+ */
+export const albumNameSchema = z
+  .string()
+  .trim()
+  .min(1, 'Album name is required')
+  .max(
+    MAX_ALBUM_NAME_LENGTH,
+    `Album name must be under ${MAX_ALBUM_NAME_LENGTH} characters`,
+  )
+
 /** Shared by the upload form and the updatePhoto Server Action. */
 export const updatePhotoSchema = z.object({
   altText: z
