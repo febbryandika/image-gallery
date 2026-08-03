@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
 import { Lightbox } from '@/components/Lightbox'
 import { PhotoCard } from '@/components/PhotoCard'
+import { useLightbox } from '@/components/use-lightbox'
 import type { AlbumOption, PhotoView } from '@/lib/photo-view'
 
 type PhotoGridProps = {
@@ -11,28 +11,7 @@ type PhotoGridProps = {
 }
 
 export function PhotoGrid({ photos, albums }: PhotoGridProps) {
-  const [openIndex, setOpenIndex] = useState<number | null>(null)
-  // The card that opened the lightbox, so focus can return to it on close.
-  const triggerRef = useRef<HTMLButtonElement | null>(null)
-
-  function handleOpen(id: string, trigger: HTMLButtonElement) {
-    const index = photos.findIndex((photo) => photo.id === id)
-    if (index === -1) return
-
-    triggerRef.current = trigger
-    setOpenIndex(index)
-  }
-
-  function handleClose() {
-    setOpenIndex(null)
-  }
-
-  function handleCloseAutoFocus(event: Event) {
-    // Radix would focus the Dialog's own trigger; there isn't one, so put focus
-    // back on the card that opened it (SPEC §5.2).
-    event.preventDefault()
-    triggerRef.current?.focus()
-  }
+  const { openIndex, onOpen, ...lightbox } = useLightbox(photos)
 
   return (
     <>
@@ -42,7 +21,7 @@ export function PhotoGrid({ photos, albums }: PhotoGridProps) {
             key={photo.id}
             photo={photo}
             albums={albums}
-            onOpen={handleOpen}
+            onOpen={onOpen}
           />
         ))}
       </div>
@@ -51,9 +30,7 @@ export function PhotoGrid({ photos, albums }: PhotoGridProps) {
         photos={photos}
         albums={albums}
         index={openIndex}
-        onIndexChange={setOpenIndex}
-        onClose={handleClose}
-        onCloseAutoFocus={handleCloseAutoFocus}
+        {...lightbox}
       />
     </>
   )

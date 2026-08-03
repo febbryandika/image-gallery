@@ -50,6 +50,9 @@ Postgres is published on host port `5436` — `5432` is usually taken by a nativ
 The `db:*` scripts need `DATABASE_URL` set. Before the first `pnpm test:e2e`, install the
 browser once with `pnpm exec playwright install chromium`.
 
+The reorder end-to-end tests sign in as the demo account and rearrange a seeded album, so
+run `pnpm db:seed` before `pnpm test:e2e`.
+
 `pnpm db:seed` needs the demo photographs in `seed/images/`. They are not distributed
 with this repository — see [seed/CREDITS.md](seed/CREDITS.md).
 

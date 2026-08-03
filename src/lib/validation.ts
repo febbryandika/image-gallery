@@ -69,6 +69,20 @@ export const albumNameSchema = z
     `Album name must be under ${MAX_ALBUM_NAME_LENGTH} characters`,
   )
 
+/**
+ * The id order a drag-and-drop produces. Duplicates are rejected rather than
+ * deduped: a repeated id means the client's list disagrees with itself, and
+ * renumbering from it would write an order nobody asked for (SPEC §4.3).
+ */
+export const reorderSchema = z
+  .array(z.string())
+  .min(1, 'Nothing to reorder')
+  .max(MAX_PHOTOS_PER_ACCOUNT, 'That is more photos than an account can hold')
+  .refine(
+    (ids) => new Set(ids).size === ids.length,
+    'That order lists the same photo twice',
+  )
+
 /** Shared by the upload form and the updatePhoto Server Action. */
 export const updatePhotoSchema = z.object({
   altText: z
