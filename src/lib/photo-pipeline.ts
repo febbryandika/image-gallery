@@ -23,8 +23,14 @@ export type PhotoMetadata = {
 export type StorePhotoParams = {
   userId: string
   input: Buffer
-  /** Hardcoded by the seed today; the vision call fills it in from Phase 7. */
+  /** Hardcoded metadata. The seed passes this; the upload route doesn't. */
   metadata?: PhotoMetadata
+  /**
+   * Derives metadata from the generated thumbnail. The upload route passes
+   * describeImage here; the seed passes nothing, so it structurally cannot
+   * reach Anthropic (SPEC §9.1 — seeding stays free and deterministic).
+   */
+  deriveMetadata?: (thumbnail: Buffer) => Promise<PhotoMetadata>
 }
 
 /**
@@ -35,6 +41,7 @@ export async function processAndStorePhoto({
   userId,
   input,
   metadata,
+  deriveMetadata,
 }: StorePhotoParams) {
   let full: { data: Buffer; info: { width: number; height: number } }
   let thumb: Buffer
@@ -75,6 +82,11 @@ export async function processAndStorePhoto({
     putObject(thumbKey, thumb, 'image/webp'),
   ])
 
+  // Awaited, never fire-and-forget: serverless freezes the function the moment
+  // the response is returned, so a floating promise silently loses the
+  // metadata (SPEC §4.1). describeImage swallows its own errors.
+  const derived = deriveMetadata ? await deriveMetadata(thumb) : undefined
+
   try {
     // Dimensions of what is actually stored: post-rotate, post-resize.
     const [photo] = await db
@@ -85,7 +97,7 @@ export async function processAndStorePhoto({
         storageKey,
         width: full.info.width,
         height: full.info.height,
-        ...(metadata ?? {}),
+        ...(derived ?? metadata ?? {}),
       })
       .returning()
 
