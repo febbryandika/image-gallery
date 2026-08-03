@@ -11,6 +11,7 @@ import {
   MAX_PHOTOS_PER_ACCOUNT,
   MAX_UPLOAD_BYTES,
 } from '@/lib/validation'
+import { describeImage } from '@/lib/vision'
 
 // Sharp needs the Node runtime; the default edge runtime won't do (SPEC §4.1).
 export const runtime = 'nodejs'
@@ -55,6 +56,7 @@ export async function POST(req: Request): Promise<Response> {
     const photo = await processAndStorePhoto({
       userId,
       input: Buffer.from(await file.arrayBuffer()),
+      deriveMetadata: describeImage,
     })
     return Response.json(photo, { status: 201 })
   } catch (cause) {

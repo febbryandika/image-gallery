@@ -18,8 +18,10 @@
     "db:seed": "tsx seed/index.mts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.27",
     "@aws-sdk/client-s3": "^3.1101.0",
     "@paralleldrive/cuid2": "^3.3.0",
+    "ai": "^7.0.48",
     "better-auth": "^1.6.25",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
