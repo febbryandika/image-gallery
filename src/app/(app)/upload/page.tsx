@@ -1,8 +1,13 @@
 import type { Metadata } from 'next'
+import { UploadForm } from '@/components/UploadForm'
 
 export const metadata: Metadata = { title: 'Upload' }
 
-// Phase 4 replaces this with the UploadForm (SPEC §5).
 export default function UploadPage() {
-  return <h1 className="text-2xl font-semibold tracking-tight">Upload</h1>
+  return (
+    <div className="mx-auto max-w-xl space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Upload</h1>
+      <UploadForm />
+    </div>
+  )
 }
