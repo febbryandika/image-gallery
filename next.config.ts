@@ -10,11 +10,13 @@ function r2RemotePatterns(): NonNullable<
   if (!raw) return []
 
   try {
-    const { protocol, hostname } = new URL(raw)
+    const { protocol, hostname, port } = new URL(raw)
     return [
       {
         protocol: protocol === 'http:' ? 'http' : 'https',
         hostname,
+        // Without this a public URL on a non-default port is silently rejected.
+        ...(port ? { port } : {}),
         pathname: '/**',
       },
     ]
