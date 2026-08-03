@@ -1,6 +1,11 @@
 import Link from 'next/link'
+import { signOutAction } from '@/app/actions/auth'
+import { Button } from '@/components/ui/button'
+import { getSession } from '@/lib/auth'
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const session = await getSession()
+
   return (
     <header className="border-b">
       <a
@@ -16,9 +21,21 @@ export function SiteHeader() {
         <Link href="/" className="rounded-sm font-semibold tracking-tight">
           Image Gallery
         </Link>
-        <Link href="/upload" className="rounded-sm text-sm">
-          Upload
-        </Link>
+        {session ? (
+          <div className="flex items-center gap-4">
+            <Link href="/upload" className="rounded-sm text-sm">
+              Upload
+            </Link>
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              {session.user.email}
+            </span>
+            <form action={signOutAction}>
+              <Button type="submit" variant="outline" size="sm">
+                Sign out
+              </Button>
+            </form>
+          </div>
+        ) : null}
       </nav>
     </header>
   )

@@ -6,10 +6,16 @@ A personal photo gallery with automatic AI alt text and a fully keyboard-operabl
 
 ```bash
 pnpm install
-cp .env.example .env.local
+cp .env.example .env
 docker compose up -d
+pnpm db:migrate
 pnpm dev
 ```
+
+Set `BETTER_AUTH_SECRET` in `.env` before starting — `openssl rand -base64 32`.
+
+Use `.env`, not `.env.local`: Next.js and drizzle-kit both read it, so one file drives
+the app and the migration commands.
 
 Postgres is published on host port `5436` — `5432` is usually taken by a native install.
 
@@ -31,3 +37,9 @@ Postgres is published on host port `5436` — `5432` is usually taken by a nativ
 
 The `db:*` scripts need `DATABASE_URL` set. Before the first `pnpm test:e2e`, install the
 browser once with `pnpm exec playwright install chromium`.
+
+## Accessibility
+
+Every flow is keyboard-operable. The login form uses real labels, wires validation errors
+to their inputs with `aria-describedby`, announces form-level errors through a live region,
+and submits without JavaScript.
