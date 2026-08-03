@@ -101,3 +101,7 @@ docs/*
 !docs/API.md
 !docs/DATABASE.md
 !docs/DEPLOYMENT.md
+# Seed photographs are local-only. They are the repository owner's own work and
+# are deliberately not distributed with the repo; the seed reads them from disk.
+seed/images/*
+!seed/images/.gitkeep
