@@ -32,12 +32,17 @@ function focusedLabel(page: Page): Promise<string> {
 
 /** Tab until `match` has focus, so the assertion is "reachable", not "exists". */
 async function tabTo(page: Page, match: RegExp, limit = 60): Promise<string> {
+  const seen: string[] = []
   for (let i = 0; i < limit; i += 1) {
     await page.keyboard.press('Tab')
     const label = await focusedLabel(page)
     if (match.test(label)) return label
+    seen.push(label)
   }
-  throw new Error(`Never reached ${match} after ${limit} tabs`)
+  throw new Error(
+    `Never reached ${match} after ${limit} tabs. Stops were:\n` +
+      seen.map((s, i) => `  ${i + 1}. ${s}`).join('\n'),
+  )
 }
 
 test.beforeEach(async ({ page }) => {
@@ -73,7 +78,12 @@ test('every control hidden until hover is still reachable by Tab', async ({
   // These sit in opacity-0 clusters that only appear on hover or focus-within.
   for (const target of [/^Actions for /, /^Move /, /^Delete /]) {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible()
+    // Wait for a card, not the heading: (app)/loading.tsx renders its own
+    // "Photos" heading, so the heading appears while the grid is still a
+    // skeleton with nothing focusable in it.
+    await expect(
+      page.getByRole('button', { name: /^Open photo/ }).first(),
+    ).toBeAttached()
     await tabTo(page, target)
 
     // Reachable is not enough — a sighted keyboard user has to see it. Opacity

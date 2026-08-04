@@ -26,7 +26,17 @@ function r2RemotePatterns(): NonNullable<
 }
 
 const nextConfig: NextConfig = {
-  images: { remotePatterns: r2RemotePatterns() },
+  images: {
+    remotePatterns: r2RemotePatterns(),
+    /**
+     * Next refuses to optimize an image whose host resolves to a private IP —
+     * SSRF protection worth keeping. The stand-in bucket a clone and CI use is
+     * MinIO on localhost, which trips exactly that rule, so the exception is
+     * scoped to the one signal that says a stand-in is in play. Production
+     * never sets R2_ENDPOINT (see docs/deploy.md), so it keeps the protection.
+     */
+    dangerouslyAllowLocalIP: Boolean(process.env.R2_ENDPOINT),
+  },
 }
 
 export default nextConfig

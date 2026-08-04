@@ -12,6 +12,10 @@ const THUMB = Buffer.from('not-really-a-webp')
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // These tests are about the real call. VISION_STUB short-circuits it, so an
+  // ambient one — a developer's shell, a mis-scoped CI env — would quietly
+  // make every assertion below meaningless.
+  vi.stubEnv('VISION_STUB', '')
 })
 
 describe('describeImage', () => {
@@ -93,6 +97,30 @@ describe('describeImage', () => {
       type: 'file',
       mediaType: 'image/webp',
       data: THUMB,
+    })
+  })
+
+  describe('VISION_STUB', () => {
+    it('returns fixed metadata without calling the model at all', async () => {
+      vi.stubEnv('VISION_STUB', 'true')
+
+      const result = await describeImage(THUMB)
+
+      // The point of the flag: CI needs no key and spends nothing.
+      expect(generateObject).not.toHaveBeenCalled()
+      expect(result.altText).not.toBe('')
+      expect(result.tags.length).toBeGreaterThan(0)
+    })
+
+    it('is off unless the value is exactly "true"', async () => {
+      vi.stubEnv('VISION_STUB', '1')
+      generateObject.mockResolvedValue({
+        object: { altText: 'real', description: 'real', tags: [] },
+      })
+
+      await describeImage(THUMB)
+
+      expect(generateObject).toHaveBeenCalledOnce()
     })
   })
 })

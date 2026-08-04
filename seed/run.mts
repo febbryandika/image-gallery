@@ -7,6 +7,7 @@
 
 import { ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3'
 import { eq } from 'drizzle-orm'
+import sharp from 'sharp'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -67,11 +68,60 @@ async function createAlbums(userId: string): Promise<Map<string, string>> {
   return new Map(created.map((album) => [album.name, album.id]))
 }
 
+/**
+ * A stand-in photograph for a clone that has none. Deliberately boring: a flat
+ * duotone at a plausible aspect ratio, distinct per index so the grid does not
+ * look like one image repeated. Goes through the same Sharp + R2 pipeline a
+ * real upload does, which is the point of the seed (SPEC §9.1).
+ */
+async function placeholderImage(index: number): Promise<Buffer> {
+  const hue = (index * 47) % 360
+  const { width, height } = [
+    { width: 1200, height: 800 },
+    { width: 800, height: 1200 },
+    { width: 1000, height: 1000 },
+  ][index % 3]!
+
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 0, g: 0, b: 0 },
+    },
+  })
+    .composite([
+      {
+        input: Buffer.from(
+          `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+             <defs>
+               <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                 <stop offset="0%" stop-color="hsl(${hue} 55% 62%)" />
+                 <stop offset="100%" stop-color="hsl(${(hue + 40) % 360} 45% 32%)" />
+               </linearGradient>
+             </defs>
+             <rect width="100%" height="100%" fill="url(#g)" />
+           </svg>`,
+        ),
+        top: 0,
+        left: 0,
+      },
+    ])
+    .jpeg({ quality: 80 })
+    .toBuffer()
+}
+
 /** Everything under this user's prefix, so a re-run starts from nothing. */
 async function wipeUserPhotos(userId: string): Promise<void> {
+  // Mirrors src/lib/r2.ts: R2_ENDPOINT lets something S3-compatible stand in,
+  // which is how a clone and CI run this without a Cloudflare account.
+  const override = process.env.R2_ENDPOINT
   const s3 = new S3Client({
     region: 'auto',
-    endpoint: `https://${requireEnv('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
+    endpoint:
+      override ??
+      `https://${requireEnv('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
+    forcePathStyle: Boolean(override),
     credentials: {
       accessKeyId: requireEnv('R2_ACCESS_KEY_ID'),
       secretAccessKey: requireEnv('R2_SECRET_ACCESS_KEY'),
@@ -107,29 +157,30 @@ async function wipeUserPhotos(userId: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  // seed/images is gitignored — the photographs are local-only, so a fresh
-  // clone has the metadata but not the files. Say so plainly instead of
-  // failing on ENOENT halfway through.
+  // seed/images is gitignored — the photographs are the owner's own work and
+  // stay on the development machine (seed/CREDITS.md). A fresh clone therefore
+  // has the metadata but not the files, so it gets generated stand-ins instead
+  // of a dead end: the gallery is plain, but every other step works.
   const missing = SEED_PHOTOS.filter(
     (entry) => !existsSync(join(IMAGES_DIR, entry.file)),
   )
+  const usePlaceholders = missing.length > 0
 
-  if (missing.length > 0) {
-    console.error(
-      `\nMissing ${missing.length} of ${SEED_PHOTOS.length} files in seed/images/:\n` +
-        missing.map((entry) => `  ${entry.file}`).join('\n') +
-        '\n\nThe seed photographs are not distributed with this repository.\n' +
-        'See seed/CREDITS.md.\n',
+  if (usePlaceholders) {
+    console.log(
+      `images  ${missing.length} of ${SEED_PHOTOS.length} missing — using generated placeholders`,
     )
-    process.exit(1)
   }
 
   const userId = await findOrCreateDemoUser()
   await wipeUserPhotos(userId)
   const albumIds = await createAlbums(userId)
 
-  for (const entry of SEED_PHOTOS) {
-    const input = await readFile(join(IMAGES_DIR, entry.file))
+  for (const [index, entry] of SEED_PHOTOS.entries()) {
+    const input = usePlaceholders
+      ? await placeholderImage(index)
+      : await readFile(join(IMAGES_DIR, entry.file))
+
     await processAndStorePhoto({
       userId,
       input,

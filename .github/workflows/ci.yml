@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # No real credentials anywhere in this file, by design (SPEC §8):
+  # MinIO stands in for R2, and VISION_STUB replaces the Anthropic call.
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/image_gallery
+  BETTER_AUTH_SECRET: ci-secret-not-used-outside-this-job
+  BETTER_AUTH_URL: http://localhost:3000
+  R2_ENDPOINT: http://localhost:9000
+  R2_ACCESS_KEY_ID: minioadmin
+  R2_SECRET_ACCESS_KEY: minioadmin
+  R2_BUCKET: image-gallery
+  R2_PUBLIC_URL: http://localhost:9000/image-gallery
+  DEMO_MODE: 'false'
+  # VISION_STUB is deliberately NOT set here: it belongs to the e2e job only.
+  # src/lib/vision.test.ts exercises the real code path, and a stub in scope
+  # would short-circuit the function those tests are about.
+
+jobs:
+  check:
+    name: lint · typecheck · unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  e2e:
+    name: end-to-end
+    runs-on: ubuntu-latest
+    env:
+      # Only here: no Anthropic key exists anywhere in this workflow, so the
+      # upload journey needs deterministic metadata from the stub.
+      VISION_STUB: 'true'
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: image_gallery
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d image_gallery"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Not a service container: those cannot pass a command, and the MinIO
+      # image needs `server /data` to start at all.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:latest server /data
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:9000/minio/health/live > /dev/null; then
+              echo "MinIO is up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "MinIO never became healthy"; docker logs minio; exit 1
+
+      - name: Create the object storage bucket
+        run: pnpm ensure-bucket
+
+      - name: Push the schema and seed
+        # seed/images is not in the repo, so this seeds generated placeholders.
+        run: |
+          pnpm db:push
+          pnpm db:seed
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run Playwright
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

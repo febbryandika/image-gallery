@@ -18,13 +18,24 @@ Registration is disabled on the demo instance, so the demo account is the way in
 
 ```bash
 pnpm install
-cp .env.example .env
-docker compose up -d
-pnpm db:migrate
+cp .env.example .env          # then set BETTER_AUTH_SECRET
+docker compose up -d          # Postgres + MinIO
+pnpm ensure-bucket
+pnpm db:push
+pnpm db:seed
 pnpm dev
 ```
 
+That is the whole of it — no Cloudflare or Anthropic account needed. Compose brings up
+**MinIO** alongside Postgres and `.env.example` points the R2 variables at it, because R2 is
+S3-compatible. Production swaps those five variables for real R2 values and drops
+`R2_ENDPOINT`; see [docs/deploy.md](docs/deploy.md).
+
 Set `BETTER_AUTH_SECRET` in `.env` before starting — `openssl rand -base64 32`.
+
+Uploading needs `ANTHROPIC_API_KEY` for alt text. Without one, uploads still succeed and the
+metadata fields come back empty for you to fill in — which is the same path the app takes when
+the vision call fails.
 
 Use `.env`, not `.env.local`: Next.js and drizzle-kit both read it, so one file drives
 the app and the migration commands.
@@ -53,8 +64,19 @@ browser once with `pnpm exec playwright install chromium`.
 The reorder end-to-end tests sign in as the demo account and rearrange a seeded album, so
 run `pnpm db:seed` before `pnpm test:e2e`.
 
-`pnpm db:seed` needs the demo photographs in `seed/images/`. They are not distributed
-with this repository — see [seed/CREDITS.md](seed/CREDITS.md).
+The demo photographs in `seed/images/` are not distributed with this repository
+([seed/CREDITS.md](seed/CREDITS.md)). Without them `pnpm db:seed` generates plain placeholder
+images instead, so a fresh clone still gets a working gallery — real albums, tags and alt
+text, stand-in pictures.
+
+## CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push: lint, typecheck and
+Vitest in one job; Playwright against a **production build** in another, with Postgres and
+MinIO as service containers.
+
+It holds no credentials. MinIO stands in for R2, and `VISION_STUB=true` replaces the Anthropic
+call with fixed text so the end-to-end run is deterministic and free.
 
 ## Accessibility
 
@@ -81,14 +103,14 @@ What that covers:
 
 Fixed during the accessibility pass, all found by testing rather than reading:
 
-| Problem | Fix |
-|---|---|
-| Closing the lightbox dropped focus on `<body>` instead of returning it to the card — the dialog unmounted before Radix could run its close sequence | Keep it mounted with `open={false}` |
-| The album row's ⋯ button never appeared on hover: its named-group Tailwind variant generated no CSS at all | Use the plain `group` variant |
-| Menus marked the rest of the page `aria-hidden` while leaving it focusable (`aria-hidden-focus`) | Non-modal menus |
-| 12px counts on the active sidebar row were 4.35:1 | Darkened `--muted-foreground` to clear 4.5:1 everywhere |
-| Upload progress and "Saved" mounted their live region together with its text, so nothing was announced | Persistent live regions |
-| Dialog, menu and skeleton animation ignored `prefers-reduced-motion` | Guarded in the primitives |
+| Problem                                                                                                                                             | Fix                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Closing the lightbox dropped focus on `<body>` instead of returning it to the card — the dialog unmounted before Radix could run its close sequence | Keep it mounted with `open={false}`                     |
+| The album row's ⋯ button never appeared on hover: its named-group Tailwind variant generated no CSS at all                                          | Use the plain `group` variant                           |
+| Menus marked the rest of the page `aria-hidden` while leaving it focusable (`aria-hidden-focus`)                                                    | Non-modal menus                                         |
+| 12px counts on the active sidebar row were 4.35:1                                                                                                   | Darkened `--muted-foreground` to clear 4.5:1 everywhere |
+| Upload progress and "Saved" mounted their live region together with its text, so nothing was announced                                              | Persistent live regions                                 |
+| Dialog, menu and skeleton animation ignored `prefers-reduced-motion`                                                                                | Guarded in the primitives                               |
 
 The login form uses real labels, wires validation errors to their inputs with
 `aria-describedby`, announces form-level errors through a live region, and submits without

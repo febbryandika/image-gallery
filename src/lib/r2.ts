@@ -20,7 +20,13 @@ const R2_ENV_KEYS = [
  * so builds and typechecks stay green on a clone with no credentials.
  */
 function requireEnv(key: (typeof R2_ENV_KEYS)[number]): string {
-  const missing = R2_ENV_KEYS.filter((name) => !process.env[name])
+  const missing = R2_ENV_KEYS.filter((name) => {
+    // R2_ACCOUNT_ID only exists to build R2's endpoint. When something else is
+    // standing in (MinIO in CI), asking for it would be asking for a value that
+    // means nothing.
+    if (name === 'R2_ACCOUNT_ID' && process.env.R2_ENDPOINT) return false
+    return !process.env[name]
+  })
   if (missing.length > 0) {
     throw new Error(
       `Missing R2 environment variables: ${missing.join(', ')}. ` +
@@ -35,12 +41,26 @@ function requireEnv(key: (typeof R2_ENV_KEYS)[number]): string {
 
 let client: S3Client | null = null
 
+/**
+ * R2's own endpoint, unless something S3-compatible is standing in for it —
+ * MinIO in CI, so the suite never needs real bucket credentials. Optional, and
+ * unset everywhere that talks to the real thing.
+ */
+function endpoint(): string {
+  return (
+    process.env.R2_ENDPOINT ??
+    `https://${requireEnv('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`
+  )
+}
+
 function s3(): S3Client {
   if (!client) {
     client = new S3Client({
       // 'auto' is required by the SDK and ignored by R2.
       region: 'auto',
-      endpoint: `https://${requireEnv('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
+      endpoint: endpoint(),
+      // MinIO serves buckets as a path, not a subdomain.
+      forcePathStyle: Boolean(process.env.R2_ENDPOINT),
       credentials: {
         accessKeyId: requireEnv('R2_ACCESS_KEY_ID'),
         secretAccessKey: requireEnv('R2_SECRET_ACCESS_KEY'),
