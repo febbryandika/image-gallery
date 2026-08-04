@@ -27,9 +27,13 @@ function record(name: string, ok: boolean, detail: string): void {
 // 1. DEMO_MODE=true must refuse registration at the endpoint, not just hide the
 //    button. A 403 is the refusal; a 400 would mean disableSignUp, and a 200
 //    means DEMO_MODE is not set on the deployment.
+//
+//    The Origin header matters: without it Better Auth's CSRF guard answers 403
+//    on its own, which looks identical to the refusal we are trying to prove
+//    and would pass this check on a deployment that happily accepts sign-ups.
 const signUp = await fetch(`${base}/api/auth/sign-up/email`, {
   method: 'POST',
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', origin: base },
   body: JSON.stringify({
     email: `probe-${Date.now()}@example.com`,
     password: 'not-a-real-password',
@@ -37,10 +41,15 @@ const signUp = await fetch(`${base}/api/auth/sign-up/email`, {
   }),
 })
 
+const signUpBody = await signUp.text()
+const blockedByCsrf = signUpBody.includes('MISSING_OR_NULL_ORIGIN')
+
 record(
   'DEMO_MODE refuses registration',
-  signUp.status === 403,
-  `POST /api/auth/sign-up/email returned ${signUp.status}, expected 403`,
+  signUp.status === 403 && !blockedByCsrf,
+  blockedByCsrf
+    ? 'got 403 from the CSRF guard, not the demo hook — this check could not run'
+    : `POST /api/auth/sign-up/email returned ${signUp.status}, expected 403`,
 )
 
 // 2. The upload route must reject an unauthenticated caller before it does any
