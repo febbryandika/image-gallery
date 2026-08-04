@@ -29,14 +29,18 @@ export function Lightbox({
   onClose,
   onCloseAutoFocus,
 }: LightboxProps) {
-  if (index === null) return null
+  /**
+   * Deliberately not an early `return null`. Unmounting the Dialog the instant
+   * it closes robs Radix of its close sequence, so `onCloseAutoFocus` never
+   * runs and focus is dropped on the body instead of returning to the card
+   * that opened it (SPEC §5.2). Staying mounted with `open={false}` is what
+   * makes the focus return actually happen.
+   */
+  const photo = index === null ? undefined : photos[index]
 
-  const photo = photos[index]
-  if (!photo) return null
-
-  const hasPrevious = index > 0
-  const hasNext = index < photos.length - 1
-  const current = index
+  const current = index ?? 0
+  const hasPrevious = current > 0
+  const hasNext = current < photos.length - 1
 
   function handleOpenChange(open: boolean) {
     if (!open) onClose()
@@ -62,67 +66,74 @@ export function Lightbox({
     }
   }
 
-  const title = photo.altText.trim() === '' ? 'Photo' : photo.altText
+  const title =
+    photo === undefined || photo.altText.trim() === '' ? 'Photo' : photo.altText
 
   return (
-    <Dialog open onOpenChange={handleOpenChange}>
+    <Dialog open={photo !== undefined} onOpenChange={handleOpenChange}>
       <DialogContent
         onCloseAutoFocus={onCloseAutoFocus}
         onKeyDown={handleKeyDown}
-        className="max-w-[95vw] motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:max-w-3xl"
+        // Reduced motion is handled by DialogContent itself now, so every
+        // dialog in the app respects it rather than just this one.
+        className="max-w-[95vw] sm:max-w-3xl"
       >
-        <DialogTitle className="text-base">{title}</DialogTitle>
-        <DialogDescription
-          className={photo.description ? undefined : 'sr-only'}
-        >
-          {photo.description || 'No description yet.'}
-        </DialogDescription>
+        {photo === undefined ? null : (
+          <>
+            <DialogTitle className="text-base">{title}</DialogTitle>
+            <DialogDescription
+              className={photo.description ? undefined : 'sr-only'}
+            >
+              {photo.description || 'No description yet.'}
+            </DialogDescription>
 
-        <Image
-          src={photo.fullUrl}
-          width={photo.width}
-          height={photo.height}
-          alt={photo.altText}
-          sizes="(min-width: 640px) 768px, 95vw"
-          className="h-auto max-h-[70vh] w-full rounded-md bg-muted object-contain"
-          priority
-        />
+            <Image
+              src={photo.fullUrl}
+              width={photo.width}
+              height={photo.height}
+              alt={photo.altText}
+              sizes="(min-width: 640px) 768px, 95vw"
+              className="h-auto max-h-[70vh] w-full rounded-md bg-muted object-contain"
+              priority
+            />
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* Outside the navigation group — it moves the photo, it doesn't
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* Outside the navigation group — it moves the photo, it doesn't
               navigate between photos. */}
-          <MovePhotoMenu photo={photo} albums={albums} />
+              <MovePhotoMenu photo={photo} albums={albums} />
 
-          <div
-            className="flex flex-1 items-center justify-between gap-4"
-            role="group"
-            aria-label="Photo navigation"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handlePrevious}
-              disabled={!hasPrevious}
-            >
-              <ChevronLeftIcon aria-hidden="true" />
-              Previous
-            </Button>
-            <p aria-live="polite" className="text-sm text-muted-foreground">
-              {current + 1} of {photos.length}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleNext}
-              disabled={!hasNext}
-            >
-              Next
-              <ChevronRightIcon aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
+              <div
+                className="flex flex-1 items-center justify-between gap-4"
+                role="group"
+                aria-label="Photo navigation"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevious}
+                  disabled={!hasPrevious}
+                >
+                  <ChevronLeftIcon aria-hidden="true" />
+                  Previous
+                </Button>
+                <p aria-live="polite" className="text-sm text-muted-foreground">
+                  {current + 1} of {photos.length}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNext}
+                  disabled={!hasNext}
+                >
+                  Next
+                  <ChevronRightIcon aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

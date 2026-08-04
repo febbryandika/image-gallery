@@ -112,8 +112,28 @@ export function UploadForm() {
     if (inputRef.current) inputRef.current.value = ''
   }
 
+  const uploading = rows.filter((row) => row.status === 'uploading').length
+  const done = rows.filter((row) => row.status === 'done').length
+  const failed = rows.filter(
+    (row) => row.status === 'failed' || row.status === 'rejected',
+  ).length
+
+  // A live region only announces changes made *inside* one that already exists.
+  // Mounting the region together with its text — which is what the per-row
+  // markup used to do — usually says nothing at all.
+  const progress =
+    uploading > 0
+      ? `Uploading ${uploading} ${uploading === 1 ? 'photo' : 'photos'}.`
+      : rows.length > 0
+        ? `${done} uploaded${failed > 0 ? `, ${failed} failed` : ''}.`
+        : ''
+
   return (
     <div className="space-y-8">
+      <p role="status" className="sr-only">
+        {progress}
+      </p>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="file">Photos</Label>
@@ -153,9 +173,9 @@ function PhotoRow({ row }: { row: Row }) {
     return (
       <p className="text-sm">
         <span className="font-medium">{row.name}</span>{' '}
-        <span role="status" className="text-muted-foreground">
-          Uploading and describing…
-        </span>
+        {/* Visible only — the announcement comes from the form's persistent
+            live region, which exists before this row is added. */}
+        <span className="text-muted-foreground">Uploading and describing…</span>
       </p>
     )
   }
@@ -260,11 +280,11 @@ function MetadataForm({ name, photo }: { name: string; photo: UploadedPhoto }) {
         <Button type="button" onClick={handleSave} disabled={pending}>
           {pending ? 'Saving…' : 'Save'}
         </Button>
-        {saved ? (
-          <span role="status" className="text-sm text-muted-foreground">
-            Saved
-          </span>
-        ) : null}
+        {/* Always rendered, so the text appearing inside it is a change a
+            screen reader will actually pick up. */}
+        <span role="status" className="text-sm text-muted-foreground">
+          {saved ? 'Saved' : ''}
+        </span>
       </div>
     </div>
   )

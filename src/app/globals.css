@@ -60,7 +60,10 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* Darkened from shadcn's 0.556: that renders #737373, which is only 4.35:1
+     on --accent (the active sidebar row) and so fails AA for the 12px counts
+     sitting on it. 0.53 clears 4.5:1 on both white and accent. */
+  --muted-foreground: oklch(0.53 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
