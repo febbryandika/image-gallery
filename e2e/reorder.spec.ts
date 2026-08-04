@@ -74,6 +74,9 @@ test('a photo can be reordered with the keyboard alone, and it persists', async 
   // Space to pick up, arrow to move, Space to drop — no mouse involved.
   await handle.focus()
   await page.keyboard.press('Space')
+  // dnd-kit measures droppables after the announcement; an arrow key sent into
+  // that gap finds no neighbour. aria-pressed means it is really picked up.
+  await expect(handle).toHaveAttribute('aria-pressed', 'true')
 
   // dnd-kit's own live region. Its numeric suffix comes from a module counter,
   // so match the prefix rather than the whole id.
@@ -110,8 +113,12 @@ test('a failed save rolls the grid back and says so', async ({ page }) => {
   // Paced by the live region: the sensor has to register each step before the
   // next key arrives, or the three presses collapse into nothing.
   const liveRegion = page.locator('[id^="DndLiveRegion"]')
-  await page.getByRole('button', { name: before[0] }).focus()
+  const pickedUp = page.getByRole('button', { name: before[0] })
+  await pickedUp.focus()
   await page.keyboard.press('Space')
+  // dnd-kit measures droppables after the announcement; an arrow key sent into
+  // that gap finds no neighbour. aria-pressed means it is really picked up.
+  await expect(pickedUp).toHaveAttribute('aria-pressed', 'true')
   await expect(liveRegion).toContainText('position 1 of')
   await page.keyboard.press('ArrowRight')
   await expect(liveRegion).toContainText('position 2 of')
@@ -132,8 +139,10 @@ async function styleOfDisplacedItem(page: Page): Promise<string | null> {
   const first = await order(page)
   const liveRegion = page.locator('[id^="DndLiveRegion"]')
 
-  await page.getByRole('button', { name: first[0] }).focus()
+  const pickedUp = page.getByRole('button', { name: first[0] })
+  await pickedUp.focus()
   await page.keyboard.press('Space')
+  await expect(pickedUp).toHaveAttribute('aria-pressed', 'true')
   await expect(liveRegion).toContainText('position 1 of')
   await page.keyboard.press('ArrowRight')
   await expect(liveRegion).toContainText('position 2 of')

@@ -8,7 +8,9 @@ not published to GitHub, and not part of any clone.
 
 `seed/data.ts` still lists the metadata for each file, so the seed is
 reproducible for anyone who has the photographs on disk. Without them,
-`pnpm db:seed` reports which files are missing and exits.
+`pnpm db:seed` says so and generates plain placeholder images instead — the
+gallery, albums, tags and alt text are all real, only the pictures are
+stand-ins. That is what a fresh clone and CI both get.
 
 ## Source and rights
 

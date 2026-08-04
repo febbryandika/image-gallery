@@ -15,7 +15,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx seed/index.mts"
+    "db:seed": "tsx seed/index.mts",
+    "ensure-bucket": "tsx scripts/ensure-bucket.mts",
+    "verify:production": "tsx scripts/verify-production.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",

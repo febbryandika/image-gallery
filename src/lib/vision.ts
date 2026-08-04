@@ -34,6 +34,16 @@ const schema = z.object({
 
 const EMPTY: PhotoMetadata = { altText: '', description: '', tags: [] }
 
+/**
+ * What `VISION_STUB=true` returns instead of calling Anthropic. Deterministic
+ * so the end-to-end suite can assert on it, and free so CI never needs a key.
+ */
+const STUB: PhotoMetadata = {
+  altText: 'A stubbed description used by the test suite',
+  description: 'Generated without calling the vision model.',
+  tags: ['stub', 'test'],
+}
+
 /** Trims at a word boundary where possible so alt text doesn't end mid-word. */
 function clampAltText(altText: string): string {
   const trimmed = altText.trim()
@@ -55,6 +65,10 @@ function clampAltText(altText: string): string {
  * image, and it doesn't require the bucket to be publicly readable first.
  */
 export async function describeImage(thumbnail: Buffer): Promise<PhotoMetadata> {
+  // The one branch that keeps CI free of an Anthropic key (SPEC §8 asks for the
+  // vision call to be stubbed there). Same shape as the DEMO_MODE switch.
+  if (process.env.VISION_STUB === 'true') return STUB
+
   try {
     const { object } = await generateObject({
       model: anthropic(process.env.ANTHROPIC_MODEL ?? DEFAULT_MODEL),

@@ -56,6 +56,10 @@ test('an album page has no serious or critical violations', async ({
 }) => {
   await page.getByRole('link', { name: /^Exteriors/ }).click()
   await expect(page.getByRole('heading', { name: 'Exteriors' })).toBeVisible()
+  // The title comes from an async generateMetadata, so on a soft navigation it
+  // lands after the heading does. Assert it arrives rather than scanning into
+  // the gap and reporting a document-title violation that isn't real.
+  await expect(page).toHaveTitle(/Exteriors/)
 
   expect(await blockingViolations(page)).toEqual([])
 })
