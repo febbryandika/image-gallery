@@ -98,6 +98,8 @@ docs/*
 !docs/screenshots/
 !docs/screenshots/**
 !docs/ARCHITECTURE.md
+!docs/deploy.md
+!docs/demo.gif
 !docs/API.md
 !docs/DATABASE.md
 !docs/DEPLOYMENT.md
