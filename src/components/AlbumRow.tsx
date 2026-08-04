@@ -142,7 +142,7 @@ export function AlbumRow({ href, name, photoCount, albumId }: AlbumRowProps) {
   }
 
   return (
-    <li className="group/row flex items-center gap-1">
+    <li className="group flex items-center gap-1">
       <Link
         href={href}
         aria-current={isActive ? 'page' : undefined}
@@ -170,7 +170,10 @@ export function AlbumRow({ href, name, photoCount, albumId }: AlbumRowProps) {
               disabled={pending}
               aria-label={`Actions for ${name}`}
               // Always reachable by keyboard; only visually quiet until hover.
-              className="size-7 shrink-0 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100"
+              // Plain `group`, not a named one: the named-group variants
+              // generated no CSS at all, so hovering the row never revealed
+              // this button for mouse users.
+              className="size-7 shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100"
             >
               <MoreHorizontalIcon aria-hidden="true" />
             </Button>
