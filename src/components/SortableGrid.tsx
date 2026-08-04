@@ -31,6 +31,8 @@ type SortableGridProps = {
   albumId: string
   photos: PhotoView[]
   albums: AlbumOption[]
+  /** False while a filter hides part of the album — see the album page. */
+  reorderable: boolean
 }
 
 const screenReaderInstructions: ScreenReaderInstructions = {
@@ -49,7 +51,12 @@ function describe(photo: PhotoView | undefined): string {
   return photo.altText.trim() === '' ? 'the photo' : photo.altText
 }
 
-export function SortableGrid({ albumId, photos, albums }: SortableGridProps) {
+export function SortableGrid({
+  albumId,
+  photos,
+  albums,
+  reorderable,
+}: SortableGridProps) {
   const router = useRouter()
   const [order, setOrder] = useState(photos)
   // Adjusting state when props change: a revalidation has to win over the
@@ -137,6 +144,12 @@ export function SortableGrid({ albumId, photos, albums }: SortableGridProps) {
 
   return (
     <>
+      {reorderable ? null : (
+        <p className="text-sm text-muted-foreground">
+          Clear the filter to rearrange this album.
+        </p>
+      )}
+
       <DndContext
         // Explicit, because dnd-kit otherwise derives the `aria-describedby`
         // it puts on every handle from a module-level counter that restarts on
@@ -159,7 +172,7 @@ export function SortableGrid({ albumId, photos, albums }: SortableGridProps) {
                 photo={photo}
                 albums={albums}
                 // One drop at a time, so a second can't race the first.
-                disabled={reorder.isPending}
+                disabled={!reorderable || reorder.isPending}
                 onOpen={onOpen}
               />
             ))}

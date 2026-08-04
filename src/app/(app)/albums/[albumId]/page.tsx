@@ -2,11 +2,17 @@ import { and, asc, desc, eq } from 'drizzle-orm'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { EmptyAlbum } from '@/components/EmptyAlbum'
+import { EmptyFiltered } from '@/components/EmptyFiltered'
 import { SortableGrid } from '@/components/SortableGrid'
 import { db } from '@/db'
 import { albums, photos } from '@/db/schema'
 import { requireSession } from '@/lib/auth'
-import { listAlbumOptions, toPhotoView } from '@/lib/gallery-data'
+import { hasActiveFilter, parseFilters } from '@/lib/filters'
+import {
+  listAlbumOptions,
+  photoConditions,
+  toPhotoView,
+} from '@/lib/gallery-data'
 
 /** Never `id` alone — an album belonging to someone else must 404, not render. */
 async function findOwnedAlbum(id: string, userId: string) {
@@ -30,6 +36,7 @@ export async function generateMetadata({
 
 export default async function AlbumPage({
   params,
+  searchParams,
 }: PageProps<'/albums/[albumId]'>) {
   // The layout guard is UX; this re-derives the id so the queries are scoped.
   const session = await requireSession()
@@ -39,11 +46,14 @@ export default async function AlbumPage({
   const album = await findOwnedAlbum(albumId, userId)
   if (!album) notFound()
 
+  const filters = parseFilters(await searchParams)
+  const filtered = hasActiveFilter(filters)
+
   const [rows, albumOptions] = await Promise.all([
     db
       .select()
       .from(photos)
-      .where(and(eq(photos.albumId, album.id), eq(photos.userId, userId)))
+      .where(photoConditions(userId, filters, album.id))
       // Ascending position is the order Phase 9's reorder writes. Every row
       // starts at 0, so createdAt breaks the ties newest-first, matching the
       // main grid.
@@ -62,14 +72,27 @@ export default async function AlbumPage({
         {items.length > 0 ? (
           <p className="text-sm text-muted-foreground">
             {items.length} {items.length === 1 ? 'photo' : 'photos'}
+            {filtered ? ' found' : null}
           </p>
         ) : null}
       </div>
 
       {items.length === 0 ? (
-        <EmptyAlbum />
+        filtered ? (
+          <EmptyFiltered filters={filters} clearHref={`/albums/${album.id}`} />
+        ) : (
+          <EmptyAlbum />
+        )
       ) : (
-        <SortableGrid albumId={album.id} photos={items} albums={albumOptions} />
+        <SortableGrid
+          albumId={album.id}
+          photos={items}
+          albums={albumOptions}
+          // Dropping inside a filtered subset would renumber `position` 0..n-1
+          // for only the visible photos and silently corrupt the album's real
+          // order, so reordering waits until the filter is cleared.
+          reorderable={!filtered}
+        />
       )}
     </div>
   )

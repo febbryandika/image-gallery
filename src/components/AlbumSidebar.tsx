@@ -1,8 +1,11 @@
 import { and, count, eq } from 'drizzle-orm'
 import { AlbumRow } from '@/components/AlbumRow'
 import { CreateAlbumForm } from '@/components/CreateAlbumForm'
+import { SearchForm } from '@/components/SearchForm'
+import { TagFilter } from '@/components/TagFilter'
 import { db } from '@/db'
 import { albums, photos } from '@/db/schema'
+import { listTopTags } from '@/lib/gallery-data'
 
 type AlbumSidebarProps = {
   userId: string
@@ -12,7 +15,7 @@ export async function AlbumSidebar({ userId }: AlbumSidebarProps) {
   // One grouped query for every album's count — never a count per album. The
   // LEFT JOIN keeps empty albums in the result, and the join predicate carries
   // the ownership check so a photo can only ever count toward its own owner.
-  const [rows, [totals]] = await Promise.all([
+  const [rows, [totals], topTags] = await Promise.all([
     db
       .select({
         id: albums.id,
@@ -31,6 +34,8 @@ export async function AlbumSidebar({ userId }: AlbumSidebarProps) {
     // "All photos" needs its own scalar count: photos with a null albumId are
     // absent from the grouped result by construction.
     db.select({ total: count() }).from(photos).where(eq(photos.userId, userId)),
+
+    listTopTags(userId),
   ])
 
   return (
@@ -57,6 +62,8 @@ export async function AlbumSidebar({ userId }: AlbumSidebarProps) {
         </ul>
       </nav>
       <CreateAlbumForm />
+      <SearchForm />
+      <TagFilter tags={topTags} />
     </aside>
   )
 }

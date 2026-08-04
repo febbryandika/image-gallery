@@ -1,6 +1,11 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const BASE_URL = 'http://localhost:3000'
+/**
+ * Overridable because `reuseExistingServer` will happily adopt whatever is
+ * already listening on 3000 — including a different project's dev server — and
+ * then the suite fails against an app it was never meant to test.
+ */
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
 
 export default defineConfig({
   testDir: './e2e',
