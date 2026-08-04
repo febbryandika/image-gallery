@@ -2,7 +2,7 @@ import { and, asc, desc, eq } from 'drizzle-orm'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { EmptyAlbum } from '@/components/EmptyAlbum'
-import { PhotoGrid } from '@/components/PhotoGrid'
+import { SortableGrid } from '@/components/SortableGrid'
 import { db } from '@/db'
 import { albums, photos } from '@/db/schema'
 import { requireSession } from '@/lib/auth'
@@ -69,7 +69,7 @@ export default async function AlbumPage({
       {items.length === 0 ? (
         <EmptyAlbum />
       ) : (
-        <PhotoGrid photos={items} albums={albumOptions} />
+        <SortableGrid albumId={album.id} photos={items} albums={albumOptions} />
       )}
     </div>
   )

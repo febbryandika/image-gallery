@@ -4,24 +4,44 @@ import Image from 'next/image'
 import { DeletePhotoButton } from '@/components/DeletePhotoButton'
 import { MovePhotoMenu } from '@/components/MovePhotoMenu'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import type { AlbumOption, PhotoView } from '@/lib/photo-view'
+
+/**
+ * `masonry` is the gallery's CSS-columns flow; `grid` is the album route's
+ * uniform cells, where reading order has to match visual order so a reorder
+ * means what it looks like.
+ */
+type PhotoCardVariant = 'masonry' | 'grid'
 
 type PhotoCardProps = {
   photo: PhotoView
   albums: AlbumOption[]
   onOpen: (id: string, trigger: HTMLButtonElement) => void
+  variant?: PhotoCardVariant
 }
 
-export function PhotoCard({ photo, albums, onOpen }: PhotoCardProps) {
+export function PhotoCard({
+  photo,
+  albums,
+  onOpen,
+  variant = 'masonry',
+}: PhotoCardProps) {
   const needsAltText = photo.altText.trim() === ''
   const album = albums.find((candidate) => candidate.id === photo.albumId)
+  const isGrid = variant === 'grid'
 
   function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
     onOpen(photo.id, event.currentTarget)
   }
 
   return (
-    <div className="group relative mb-4 break-inside-avoid">
+    <div
+      className={cn(
+        'group relative',
+        isGrid ? 'h-full' : 'mb-4 break-inside-avoid',
+      )}
+    >
       <button
         type="button"
         onClick={handleClick}
@@ -30,7 +50,10 @@ export function PhotoCard({ photo, albums, onOpen }: PhotoCardProps) {
             ? 'Open photo — no alt text yet'
             : `Open photo: ${photo.altText}`
         }
-        className="block w-full overflow-hidden rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+        className={cn(
+          'block w-full overflow-hidden rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
+          isGrid && 'h-full',
+        )}
       >
         <Image
           // width/height come from the row, so the box is reserved before the
@@ -40,7 +63,11 @@ export function PhotoCard({ photo, albums, onOpen }: PhotoCardProps) {
           height={photo.height}
           alt={photo.altText}
           sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-          className="h-auto w-full bg-muted"
+          className={cn(
+            'w-full bg-muted',
+            // Uniform cells crop; the masonry flow keeps each photo's own ratio.
+            isGrid ? 'aspect-square object-cover' : 'h-auto',
+          )}
         />
       </button>
 
